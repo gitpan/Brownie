@@ -28,6 +28,7 @@ no_index:
 requires:
   Class::Load: 0
   HTML::Selector::XPath: 0
+  HTML::TreeBuilder::XPath: 0
   Plack::Runner: 0
   Scalar::Util: 1.14
   Sub::Install: 0
@@ -39,4 +40,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/masaki/Brownie.git
-version: 0.06
+version: 0.07
