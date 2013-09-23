@@ -4,9 +4,7 @@ use strict;
 use warnings;
 use parent 'Brownie::Driver';
 use Selenium::Remote::Driver;
-use Alien::SeleniumRC;
-use Test::TCP;
-use LWP::UserAgent;
+use Selenium::Server;
 use Scalar::Util qw(blessed);
 use URI;
 use File::Slurp qw(write_file);
@@ -20,11 +18,17 @@ our $NodeClass = 'Brownie::Node::SeleniumServer';
 sub new {
     my ($class, %args) = @_;
 
-    my $server = $class->_create_selenium_server;
-    if ($server) {
-        $args{server}      = $server;
-        $args{server_host} = '127.0.0.1';
-        $args{server_port} = $server->port,
+    if ($ENV{SELENIUM_REMOTE_SERVER_HOST} && $ENV{SELENIUM_REMOTE_SERVER_PORT}) {
+       $args{server_host} = $ENV{SELENIUM_REMOTE_SERVER_HOST};
+       $args{server_port} = $ENV{SELENIUM_REMOTE_SERVER_PORT};
+    }
+    else {
+        my $server = $class->_create_selenium_server(%args);
+        if ($server) {
+            $args{server}      = $server;
+            $args{server_host} = $server->host;
+            $args{server_port} = $server->port,
+        }
     }
 
     $args{browser_name} ||= ($ENV{SELENIUM_BROWSER_NAME} || 'firefox');
@@ -32,47 +36,29 @@ sub new {
     return $class->SUPER::new(%args);
 }
 
+sub _create_selenium_server {
+    my ($class, %args) = @_;
+
+    my $server = Selenium::Server->new;
+    $server->start if $server;
+
+    $server;
+}
+
 sub DESTROY {
     my $self = shift;
 
     delete $self->{browser};
-    $self->_shutdown_selenium_server;
+
+    if ($self->{server}) {
+        $self->{server}->stop;
+        delete $self->{server};
+    }
 }
 
 sub server_host  { shift->{server_host}  }
 sub server_port  { shift->{server_port}  }
 sub browser_name { shift->{browser_name} }
-
-sub _create_selenium_server {
-    my $class = shift;
-
-    my $server = Test::TCP->new(
-        code => sub {
-            my $port = shift;
-            Alien::SeleniumRC::start("-port $port");
-        },
-    );
-
-    return $server;
-}
-
-sub _shutdown_selenium_server {
-    my $self = shift;
-
-    if ($self->{server}) {
-        LWP::UserAgent->new->get($self->_selenium_shutdown_url);
-        delete $self->{server};
-    }
-}
-
-sub _selenium_shutdown_url {
-    my $self = shift;
-
-    my $base = 'http://%s:%s/selenium-server/driver/?cmd=shutDownSeleniumServer';
-    return sprintf $base => $self->server_host, $self->server_port;
-}
-
-### Browser
 
 sub browser {
     my $self = shift;
@@ -85,8 +71,6 @@ sub browser {
 
     return $self->{browser};
 }
-
-### Navigation
 
 sub visit {
     my ($self, $url) = @_;
@@ -103,8 +87,6 @@ sub current_path {
     return $self->current_url->path;
 }
 
-### Pages
-
 sub title {
     my $self = shift;
     return $self->browser->get_title;
@@ -120,8 +102,6 @@ sub screenshot {
     my $image = decode_base64($self->browser->screenshot);
     write_file($file, { binmode => ':raw' }, $image);
 }
-
-### Finder
 
 sub find {
     my ($self, $locator, %args) = @_;
@@ -158,8 +138,6 @@ sub all {
 
     return @elements ? map { $NodeClass->new(driver => $self, native => $_) } @elements : ();
 }
-
-### Scripting
 
 sub execute_script {
     my ($self, $script) = @_;
@@ -239,6 +217,12 @@ You can also set selenium-server parameters using C<%ENV>:
 =item * C<response_headers>
 
 =back
+
+=head1 TIPS
+
+=head2 Use external selenium server
+
+If you secify "SELENIUM_REMOTE_SERVER_HOST" and "SELENIUM_REMOTE_SERVER_PORT" enviromnent valiables, Brownie uses its server for selenium server.  By this, you can quicken the execution of your tests.
 
 =head1 AUTHOR
 

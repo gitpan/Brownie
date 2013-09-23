@@ -7,6 +7,7 @@ build_requires:
   File::Temp: 0
   Test::Exception: 0
   Test::Fake::HTTPD: 0.03
+  Test::Mock::Guard: 0
   Test::More: 0.98
   Test::UseAllModules: 0
   URI::QueryParam: 0
@@ -26,16 +27,15 @@ no_index:
     - t
     - xt
 requires:
-  Alien::SeleniumRC: 0
   Class::Load: 0
   File::Slurp: 0
   HTML::Selector::XPath: 0
   HTML::TreeBuilder::XPath: 0
-  LWP::UserAgent: 0
   MIME::Base64: 0
   Plack::Runner: 0
   Scalar::Util: 1.14
   Selenium::Remote::Driver: 0
+  Selenium::Server: 0
   Sub::Install: 0
   Test::TCP: 0
   URI: 0
@@ -45,4 +45,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/masaki/Brownie.git
-version: 0.08
+version: 0.09
